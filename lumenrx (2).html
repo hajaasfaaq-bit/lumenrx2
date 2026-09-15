@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LumenRx — Find your medicine nearby</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#101828;
+    --paper:#F7F8FC;
+    --card:#FFFFFF;
+    --indigo:#4338CA;
+    --indigo-dark:#312BA0;
+    --amber:#F5A524;
+    --amber-dark:#D48806;
+    --mist:#667085;
+    --line:#E4E7EC;
+    --shadow: 0 10px 34px rgba(16,24,40,0.08);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper); color:var(--ink); font-family:'Inter',sans-serif;
+    min-height:100vh; overflow-x:hidden;
+  }
+  h1,h2,h3,.brand,.pill-btn,.stat-num,.logo-text{font-family:'Sora',sans-serif;}
+
+  .bg-glow{ position:fixed; inset:0; z-index:-1; overflow:hidden; }
+  .bg-glow span{
+    position:absolute; border-radius:50%; filter:blur(70px); opacity:0.35;
+  }
+  .g1{ width:520px; height:520px; background:var(--indigo); top:-220px; right:-160px; animation:drift 14s ease-in-out infinite alternate; }
+  .g2{ width:420px; height:420px; background:var(--amber); bottom:-200px; left:-160px; opacity:0.22; animation:drift 16s ease-in-out infinite alternate-reverse; }
+  @keyframes drift{ from{ transform:translate(0,0);} to{ transform:translate(30px,-24px);} }
+
+  .topbar{ display:flex; align-items:center; justify-content:space-between; padding:22px 5vw; }
+  .brand{ display:flex; align-items:center; gap:10px; font-weight:700; font-size:1.35rem; color:var(--ink); }
+  .lumen-mark{ position:relative; width:26px; height:26px; flex-shrink:0; }
+  .lumen-mark .core{
+    position:absolute; inset:7px; background:var(--amber); border-radius:50%;
+    box-shadow:0 0 10px var(--amber);
+  }
+  .lumen-mark .ring{
+    position:absolute; inset:0; border:2px solid var(--indigo); border-radius:50%;
+    opacity:0.55; animation:pulse 2.4s ease-out infinite;
+  }
+  @keyframes pulse{
+    0%{ transform:scale(0.5); opacity:0.7; }
+    100%{ transform:scale(1.6); opacity:0; }
+  }
+  .logo-text .rx{ color:var(--indigo); }
+  .topbar .user-chip{ font-size:0.9rem; color:var(--mist); display:flex; align-items:center; gap:12px; }
+  .logout-link{ color:var(--indigo); text-decoration:none; font-weight:600; cursor:pointer; border-bottom:1.5px solid var(--amber); padding-bottom:1px; }
+
+  .screen{ display:none; }
+  .screen.active{ display:block; }
+
+  .auth-wrap{
+    max-width:1120px; margin:2vh auto 6vh; padding:0 5vw;
+    display:grid; grid-template-columns:1.1fr 0.9fr; gap:60px; align-items:center;
+  }
+  @media (max-width:860px){ .auth-wrap{grid-template-columns:1fr;} }
+
+  .auth-hero h1{ font-size:clamp(2.1rem,4.2vw,3.3rem); line-height:1.1; margin:0 0 18px; letter-spacing:-0.01em; }
+  .auth-hero h1 .u{ color:var(--indigo); }
+  .auth-hero p{ color:var(--mist); font-size:1.05rem; max-width:48ch; line-height:1.6; margin-bottom:28px; }
+  .mini-stats{ display:flex; gap:28px; flex-wrap:wrap; }
+  .mini-stats div{ min-width:110px; }
+  .stat-num{ font-size:1.6rem; font-weight:700; color:var(--indigo); }
+  .stat-label{ font-size:0.82rem; color:var(--mist); }
+
+  .card{
+    background:var(--card); border-radius:22px; padding:38px 34px;
+    box-shadow:var(--shadow); border:1px solid var(--line); animation:rise 0.5s ease both;
+  }
+  @keyframes rise{ from{opacity:0; transform:translateY(14px);} to{opacity:1; transform:none;} }
+  .card h2{ margin:0 0 6px; font-size:1.5rem; }
+  .card .sub{ color:var(--mist); font-size:0.92rem; margin-bottom:24px; }
+
+  .field{ margin-bottom:16px; }
+  .field label{ display:block; font-size:0.83rem; font-weight:600; color:var(--indigo-dark); margin-bottom:6px; }
+  .field input{
+    width:100%; padding:12px 14px; border-radius:12px; border:1.5px solid var(--line);
+    font-family:'Inter',sans-serif; font-size:0.96rem; background:#FBFBFE; color:var(--ink);
+    transition:border-color 0.15s, box-shadow 0.15s;
+  }
+  .field input:focus{ outline:none; border-color:var(--indigo); box-shadow:0 0 0 3px rgba(67,56,202,0.12); }
+  .err-text{ color:var(--amber-dark); font-size:0.82rem; margin-top:6px; min-height:1em; }
+
+  .pill-btn{
+    width:100%; border:none; padding:13px 20px; border-radius:999px; background:var(--indigo);
+    color:#fff; font-weight:600; font-size:1rem; cursor:pointer;
+    transition:transform 0.12s, background 0.15s, box-shadow 0.2s; margin-top:6px;
+  }
+  .pill-btn:hover{ background:var(--indigo-dark); transform:translateY(-1px); box-shadow:0 8px 20px rgba(67,56,202,0.25); }
+  .switch-line{ text-align:center; margin-top:20px; font-size:0.9rem; color:var(--mist); }
+  .switch-line a{ color:var(--amber-dark); font-weight:600; text-decoration:none; cursor:pointer; }
+
+  .toast{
+    position:fixed; top:20px; left:50%; transform:translateX(-50%) translateY(-20px);
+    background:var(--indigo-dark); color:#fff; padding:12px 22px; border-radius:12px;
+    font-size:0.9rem; font-weight:500; opacity:0; pointer-events:none; z-index:999;
+    transition:opacity 0.25s, transform 0.25s; box-shadow:var(--shadow);
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+  .toast.error{ background:var(--amber-dark); }
+
+  .dash-hero{ padding:10px 5vw 30px; text-align:left; }
+  .dash-hero h1{ font-size:clamp(1.7rem,3vw,2.4rem); margin:0 0 8px; }
+  .dash-hero p{ color:var(--mist); margin:0 0 26px; max-width:62ch; }
+
+  .search-row{ display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+  .search-box{ flex:1; min-width:260px; position:relative; }
+  .search-box input{
+    width:100%; padding:16px 20px 16px 48px; border-radius:16px; border:1.5px solid var(--line);
+    font-size:1.05rem; background:#fff; box-shadow:var(--shadow);
+  }
+  .search-box input:focus{ outline:none; border-color:var(--indigo); }
+  .search-box .ic{ position:absolute; left:18px; top:50%; transform:translateY(-50%); color:var(--mist); }
+  .filter-select{
+    padding:14px 16px; border-radius:14px; border:1.5px solid var(--line); background:#fff;
+    font-family:'Inter',sans-serif; font-size:0.95rem; color:var(--ink); box-shadow:var(--shadow);
+  }
+  .suggest-box{
+    background:#fff; border:1px solid var(--line); border-radius:14px; margin-top:8px;
+    box-shadow:var(--shadow); overflow:hidden; max-height:250px; overflow-y:auto;
+  }
+  .suggest-item{ padding:11px 18px; cursor:pointer; font-size:0.93rem; border-bottom:1px solid #F0F1F7; }
+  .suggest-item:last-child{ border-bottom:none; }
+  .suggest-item:hover{ background:var(--paper); }
+  .suggest-item b{ color:var(--indigo); }
+
+  .results-wrap{ padding:6px 5vw 60px; }
+  .results-head{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:18px; flex-wrap:wrap; gap:8px; }
+  .results-head h3{ margin:0; font-size:1.1rem; }
+  .results-head span{ color:var(--mist); font-size:0.88rem; }
+
+  .shop-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:18px; }
+  .shop-card{
+    background:#fff; border:1px solid var(--line); border-radius:18px; padding:22px;
+    box-shadow:var(--shadow); display:flex; flex-direction:column; gap:10px; animation:pop 0.35s ease both;
+  }
+  @keyframes pop{ from{opacity:0; transform:scale(0.97);} to{opacity:1; transform:none;} }
+  .shop-card .name-row{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
+  .shop-card h4{ margin:0; font-size:1.08rem; color:var(--indigo-dark); }
+  .badge{ background:rgba(245,165,36,0.14); color:var(--amber-dark); font-size:0.72rem; font-weight:700; padding:4px 10px; border-radius:999px; white-space:nowrap; }
+  .loc-line{ color:var(--mist); font-size:0.88rem; display:flex; gap:6px; align-items:flex-start; }
+  .med-tags{ display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
+  .med-tag{ background:#EEF0FB; color:var(--indigo-dark); font-size:0.75rem; padding:4px 9px; border-radius:8px; }
+  .med-tag.match{ background:var(--indigo); color:#fff; font-weight:600; }
+  .card-actions{ display:flex; gap:10px; margin-top:10px; }
+  .card-actions a, .card-actions button{
+    flex:1; text-align:center; padding:9px 10px; border-radius:10px; font-size:0.85rem;
+    font-weight:600; text-decoration:none; cursor:pointer; border:none; transition:transform 0.12s;
+  }
+  .card-actions a:hover, .card-actions button:hover{ transform:translateY(-1px); }
+  .btn-map{ background:var(--indigo); color:#fff; }
+  .btn-call{ background:transparent; color:var(--indigo-dark); border:1.5px solid var(--indigo) !important; }
+
+  .empty-state{ text-align:center; padding:60px 20px; color:var(--mist); }
+  .empty-state .icon{ font-size:2.6rem; margin-bottom:10px; }
+
+  footer{ text-align:center; padding:24px; color:var(--mist); font-size:0.82rem; }
+</style>
+</head>
+<body>
+
+<div class="bg-glow" aria-hidden="true"><span class="g1"></span><span class="g2"></span></div>
+
+<div class="topbar">
+  <div class="brand"><span class="lumen-mark"><span class="ring"></span><span class="core"></span></span>
+    <span class="logo-text">Lumen<span class="rx">Rx</span></span>
+  </div>
+  <div class="user-chip" id="userChip" style="display:none;">
+    <span id="userNameLabel"></span>
+    <span class="logout-link" onclick="logout()">Log out</span>
+  </div>
+</div>
+
+<!-- ================= LOGIN ================= -->
+<section class="screen active" id="loginScreen">
+  <div class="auth-wrap">
+    <div class="auth-hero">
+      <h1>Light the way to <span class="u">your nearest medicine.</span></h1>
+      <p>Search any medicine and instantly see which registered pharmacies across India have it in stock — get directions on Google Maps and call ahead before you go.</p>
+      <div class="mini-stats">
+        <div><div class="stat-num" id="statShops">0</div><div class="stat-label">Pharmacies registered</div></div>
+        <div><div class="stat-num" id="statMeds">0</div><div class="stat-label">Medicines tracked</div></div>
+        <div><div class="stat-num" id="statStates">0</div><div class="stat-label">States covered</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Welcome back</h2>
+      <div class="sub">Log in to search medicines near you</div>
+      <div class="field"><label for="loginEmail">Email</label><input type="email" id="loginEmail" placeholder="you@example.com"></div>
+      <div class="field"><label for="loginPass">Password</label><input type="password" id="loginPass" placeholder="••••••••">
+        <div class="err-text" id="loginErr"></div>
+      </div>
+      <button class="pill-btn" onclick="handleLogin()">Log in</button>
+      <div class="switch-line">New here? <a onclick="showScreen('signupScreen')">Create an account</a></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= SIGNUP ================= -->
+<section class="screen" id="signupScreen">
+  <div class="auth-wrap">
+    <div class="auth-hero">
+      <h1>Create your account,<br><span class="u">it takes a minute.</span></h1>
+      <p>Save your details once so you can jump straight to searching medicines every time you come back to LumenRx.</p>
+    </div>
+    <div class="card">
+      <h2>Create account</h2>
+      <div class="sub">Fill in your details to get started</div>
+      <div class="field"><label for="suUsername">Username</label><input type="text" id="suUsername" placeholder="e.g. arun_k"></div>
+      <div class="field"><label for="suEmail">Email ID</label><input type="email" id="suEmail" placeholder="you@example.com"></div>
+      <div class="field"><label for="suPass">Password</label><input type="password" id="suPass" placeholder="Minimum 6 characters"></div>
+      <div class="field"><label for="suConfirm">Confirm password</label><input type="password" id="suConfirm" placeholder="Re-enter password">
+        <div class="err-text" id="signupErr"></div>
+      </div>
+      <button class="pill-btn" onclick="handleSignup()">Create account</button>
+      <div class="switch-line">Already have an account? <a onclick="showScreen('loginScreen')">Log in</a></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= DASHBOARD ================= -->
+<section class="screen" id="dashScreen">
+  <div class="dash-hero">
+    <h1>Search a medicine, find the shop.</h1>
+    <p>Type a medicine name below (list sourced from the NHS Medicines A–Z). We'll show every registered pharmacy that stocks it — pick a state and district, then get live Google Maps directions.</p>
+    <div class="search-row">
+      <div class="search-box">
+        <span class="ic">⌕</span>
+        <input type="text" id="medSearch" placeholder="Try “Paracetamol”, “Amoxicillin”, “Insulin”…" autocomplete="off" oninput="onSearchInput()">
+        <div class="suggest-box" id="suggestBox" style="display:none;"></div>
+      </div>
+      <select class="filter-select" id="stateFilter" onchange="onFilterChange()"></select>
+      <select class="filter-select" id="districtFilter" onchange="renderResults()"><option value="">All districts</option></select>
+    </div>
+  </div>
+
+  <div class="results-wrap">
+    <div class="results-head">
+      <h3 id="resultsTitle">All pharmacies</h3>
+      <span id="resultsCount"></span>
+    </div>
+    <div class="shop-grid" id="shopGrid"></div>
+  </div>
+</section>
+
+<div class="toast" id="toast"></div>
+<footer>LumenRx — demo directory. Medicine names are sourced from the NHS Medicines A–Z list; shop &amp; stock data below is illustrative sample data for this prototype, not a live feed.</footer>
+
+<script>
+/* ================= MEDICINE LIST (NHS Medicines A–Z, cleaned) ================= */
+const MEDICINES = ["Aciclovir","Acrivastine","Adalimumab","Alendronic acid","Allopurinol","Alogliptin",
+"Amitriptyline","Amlodipine","Amoxicillin","Anastrozole","Antacids","Antibiotics","Anticoagulants",
+"Antidepressants","Antifungal medicines","Antihistamines","Apixaban","Aripiprazole","Aspirin","Atenolol",
+"Atorvastatin","Azathioprine","Azithromycin","Baclofen","Beclometasone","Bendroflumethiazide",
+"Benzoyl peroxide","Benzydamine","Beta blockers","Betahistine","Betamethasone","Bimatoprost","Bisacodyl",
+"Bisoprolol","Brinzolamide","Budesonide","Bumetanide","Buprenorphine","Buscopan","Calcipotriol",
+"Candesartan","Carbamazepine","Carbimazole","Carbocisteine","Carvedilol","Cefalexin","Cetirizine",
+"Chloramphenicol","Chlorhexidine","Chlorphenamine","Cinnarizine","Ciprofloxacin","Citalopram",
+"Clarithromycin","Clobetasol","Clobetasone","Clonazepam","Clonidine","Clopidogrel","Clotrimazole",
+"Co-amoxiclav","Co-codamol","Codeine","Colchicine","Colecalciferol","Cyanocobalamin","Cyclizine",
+"Dapagliflozin","Decongestants","Dexamethasone","Diazepam","Diclofenac","Digoxin","Dihydrocodeine",
+"Diltiazem","Diphenhydramine","Dipyridamole","Docusate","Domperidone","Donepezil","Doxazosin",
+"Doxycycline","Duloxetine","Edoxaban","Empagliflozin","Enalapril","Eplerenone","Erythromycin",
+"Escitalopram","Esomeprazole","Ezetimibe","Felodipine","Fentanyl","Ferrous fumarate","Ferrous sulfate",
+"Fexofenadine","Finasteride","Flucloxacillin","Fluconazole","Fluoxetine","Fluticasone","Folic acid",
+"Furosemide","Fusidic acid","Gabapentin","Gaviscon","Gliclazide","Glyceryl trinitrate","Hydrocortisone",
+"Hydroxocobalamin","Hydroxychloroquine","Hyoscine","Ibuprofen","Indapamide","Insulin","Irbesartan",
+"Isosorbide mononitrate","Isotretinoin","Ketoconazole","Lactulose","Lamotrigine","Lansoprazole",
+"Latanoprost","Laxatives","Lercanidipine","Letrozole","Levetiracetam","Levothyroxine","Linagliptin",
+"Liraglutide","Lisinopril","Lithium","Loperamide","Loratadine","Lorazepam","Losartan","Lymecycline",
+"Macrogol","Mebendazole","Mebeverine","Melatonin","Memantine","Mesalazine","Metformin","Methadone",
+"Methotrexate","Methylphenidate","Metoclopramide","Metoprolol","Metronidazole","Mirabegron","Mirtazapine",
+"Mometasone","Montelukast","Morphine","Naproxen","Nefopam","Nicorandil","Nifedipine","Nitrofurantoin",
+"Nortriptyline","NSAIDs","Nystatin","Olanzapine","Omeprazole","Orlistat","Oxybutynin","Oxycodone",
+"Pantoprazole","Paracetamol","Paroxetine","Peppermint oil","Perindopril","Phenoxymethylpenicillin",
+"Pravastatin","Prednisolone","Pregabalin","Prochlorperazine","Promethazine","Propranolol","Pseudoephedrine",
+"Quetiapine","Ramipril","Ranitidine","Risperidone","Rivaroxaban","Ropinirole","Rosuvastatin","Salbutamol",
+"Semaglutide","Senna","Sertraline","Sildenafil","Simeticone","Simvastatin","Sitagliptin","Sodium valproate",
+"Solifenacin","Sotalol","Spironolactone","Statins","Steroids","Sulfasalazine","Sumatriptan","Tadalafil",
+"Tamsulosin","Terbinafine","Thiamine","Timolol","Tiotropium","Tirzepatide","Tolterodine","Topiramate",
+"Tramadol","Tranexamic acid","Trazodone","Trimethoprim","Valproic acid","Valsartan","Varenicline",
+"Venlafaxine","Verapamil","Warfarin","Zolpidem","Zopiclone"];
+
+/* ================= SHOP DIRECTORY (sample data across India) ================= */
+const DATA = {
+  "Tamil Nadu": {
+    "Coimbatore": [
+      {name:"RS Puram Pharmacy", phone:"+91 90174 80239", lat:10.9957, lng:76.9139, address:"RS Puram, Coimbatore",
+        meds:["Paracetamol", "Esomeprazole", "Metronidazole", "Alogliptin", "Levothyroxine"]},
+      {name:"Gandhipuram Medicals", phone:"+91 96171 41544", lat:10.9826, lng:76.9061, address:"Gandhipuram, Coimbatore",
+        meds:["Paracetamol", "Melatonin", "Gabapentin", "Amitriptyline", "Topiramate"]},
+      {name:"Race Course Chemists", phone:"+91 99163 85642", lat:11.0247, lng:77.0095, address:"Race Course, Coimbatore",
+        meds:["Paracetamol", "Alendronic acid", "Citalopram", "Adalimumab", "Memantine", "Venlafaxine", "Betahistine", "Diazepam"]},
+      {name:"Peelamedu Health Store", phone:"+91 99415 83434", lat:11.0071, lng:76.9607, address:"Peelamedu, Coimbatore",
+        meds:["Paracetamol", "Atenolol", "Metoprolol", "Methylphenidate", "Olanzapine", "Carbocisteine"]},
+      {name:"Ganapathy Medical Store", phone:"+91 91677 17812", lat:11.0015, lng:76.9615, address:"Ganapathy, Coimbatore",
+        meds:["Paracetamol", "Letrozole", "Prednisolone", "Lorazepam", "Gaviscon", "Spironolactone"]},
+      {name:"Saibaba Colony Care Pharmacy", phone:"+91 97470 49291", lat:10.9945, lng:76.9661, address:"Saibaba Colony, Coimbatore",
+        meds:["Paracetamol", "Tadalafil", "Carbamazepine", "Propranolol", "Statins", "Clopidogrel"]},
+      {name:"Singanallur Health Mart", phone:"+91 97996 55020", lat:10.9666, lng:76.9318, address:"Singanallur, Coimbatore",
+        meds:["Paracetamol", "Dexamethasone", "Naproxen", "Antacids", "Bendroflumethiazide", "Liraglutide", "Fusidic acid", "Buprenorphine"]},
+      {name:"Ukkadam Family Pharmacy", phone:"+91 97531 15138", lat:11.0477, lng:76.914, address:"Ukkadam, Coimbatore",
+        meds:["Paracetamol", "Sodium valproate", "Memantine", "Methylphenidate", "Sumatriptan"]},
+      {name:"Podanur Medicos", phone:"+91 95708 75100", lat:11.0619, lng:76.9334, address:"Podanur, Coimbatore",
+        meds:["Paracetamol", "Anastrozole", "Trimethoprim", "Antihistamines", "Cyanocobalamin", "Lactulose", "Propranolol", "Peppermint oil"]},
+      {name:"Ramanathapuram Drug Store", phone:"+91 94762 85752", lat:10.9646, lng:76.9835, address:"Ramanathapuram, Coimbatore",
+        meds:["Paracetamol", "Decongestants", "Risperidone", "Ferrous sulfate", "Perindopril", "Empagliflozin", "Azithromycin", "Isosorbide mononitrate"]},
+      {name:"Vadavalli Pharmacy", phone:"+91 97160 38600", lat:10.9995, lng:76.9691, address:"Vadavalli, Coimbatore",
+        meds:["Paracetamol", "Beta blockers", "Senna", "Clotrimazole", "Flucloxacillin", "Finasteride", "Zopiclone"]},
+      {name:"Thudiyalur Medicals", phone:"+91 96662 46416", lat:11.0164, lng:76.9158, address:"Thudiyalur, Coimbatore",
+        meds:["Paracetamol", "Tirzepatide", "Gliclazide", "Warfarin", "Mebeverine", "Dapagliflozin"]},
+      {name:"Kovaipudur Chemists", phone:"+91 96336 29781", lat:11.0416, lng:77.0142, address:"Kovaipudur, Coimbatore",
+        meds:["Paracetamol", "Candesartan", "Bisoprolol", "Clobetasone", "Pantoprazole"]},
+      {name:"Sundarapuram Health Store", phone:"+91 99286 44438", lat:10.9848, lng:76.954, address:"Sundarapuram, Coimbatore",
+        meds:["Paracetamol", "Ibuprofen", "Bisacodyl", "Fusidic acid", "Lorazepam", "Ezetimibe", "Nefopam"]},
+      {name:"Kuniyamuthur Medical Store", phone:"+91 98732 95847", lat:11.0248, lng:77.0102, address:"Kuniyamuthur, Coimbatore",
+        meds:["Paracetamol", "Indapamide", "Zolpidem", "Statins", "Zopiclone"]},
+      {name:"Saravanampatti Care Pharmacy", phone:"+91 96508 61658", lat:11.0385, lng:76.9629, address:"Saravanampatti, Coimbatore",
+        meds:["Paracetamol", "Lansoprazole", "Nystatin", "Fluconazole", "Amitriptyline"]},
+      {name:"Kalapatti Health Mart", phone:"+91 97266 24408", lat:10.9797, lng:77.014, address:"Kalapatti, Coimbatore",
+        meds:["Paracetamol", "Montelukast", "Allopurinol", "Atenolol", "Amoxicillin", "Methotrexate", "Bisoprolol"]},
+      {name:"Sulur Family Pharmacy", phone:"+91 99126 19216", lat:11.0212, lng:77.0097, address:"Sulur, Coimbatore",
+        meds:["Paracetamol", "Nicorandil", "Fentanyl", "Bisoprolol", "Nystatin", "Co-amoxiclav"]},
+      {name:"Neelambur Medicos", phone:"+91 97225 25119", lat:11.0715, lng:76.9681, address:"Neelambur, Coimbatore",
+        meds:["Paracetamol", "Isotretinoin", "Lamotrigine", "Lansoprazole", "Diphenhydramine", "Antidepressants", "Bimatoprost", "Atenolol"]},
+      {name:"Avinashi Road Drug Store", phone:"+91 97948 31160", lat:11.0468, lng:76.9846, address:"Avinashi Road, Coimbatore",
+        meds:["Paracetamol", "Chlorhexidine", "Loratadine", "Escitalopram", "Bisacodyl"]},
+      {name:"Trichy Road Pharmacy", phone:"+91 98405 94268", lat:11.0396, lng:77.0055, address:"Trichy Road, Coimbatore",
+        meds:["Paracetamol", "Propranolol", "Valproic acid", "Codeine", "Lisinopril"]},
+      {name:"Mettupalayam Road Medicals", phone:"+91 93645 80984", lat:11.0008, lng:76.9158, address:"Mettupalayam Road, Coimbatore",
+        meds:["Paracetamol", "Nystatin", "Clarithromycin", "Nefopam", "Timolol", "Sulfasalazine", "Sitagliptin"]},
+      {name:"Sitra Chemists", phone:"+91 96857 39719", lat:11.0591, lng:76.9925, address:"Sitra, Coimbatore",
+        meds:["Paracetamol", "Lisinopril", "Lercanidipine", "Erythromycin", "Salbutamol", "Atorvastatin"]},
+      {name:"Selvapuram Health Store", phone:"+91 97365 35381", lat:11.0756, lng:76.9906, address:"Selvapuram, Coimbatore",
+        meds:["Paracetamol", "Hydroxychloroquine", "Thiamine", "Ropinirole", "Enalapril", "Esomeprazole", "Anticoagulants"]},
+      {name:"Ondipudur Medical Store", phone:"+91 93445 36787", lat:10.9833, lng:76.923, address:"Ondipudur, Coimbatore",
+        meds:["Paracetamol", "Nitrofurantoin", "Nefopam", "Trimethoprim", "Amoxicillin", "Lamotrigine", "Oxycodone", "Empagliflozin"]},
+      {name:"Vilankurichi Care Pharmacy", phone:"+91 91497 36125", lat:11.0528, lng:76.906, address:"Vilankurichi, Coimbatore",
+        meds:["Paracetamol", "Candesartan", "Glyceryl trinitrate", "Sumatriptan", "Nystatin", "Doxycycline", "Antifungal medicines", "Terbinafine"]},
+      {name:"Chinnavedampatti Health Mart", phone:"+91 97511 21130", lat:11.0703, lng:76.9824, address:"Chinnavedampatti, Coimbatore",
+        meds:["Paracetamol", "Buscopan", "Benzydamine", "Atorvastatin", "Bisoprolol", "Mirtazapine"]},
+      {name:"Town Hall Family Pharmacy", phone:"+91 92726 88101", lat:11.0654, lng:76.9926, address:"Town Hall, Coimbatore",
+        meds:["Paracetamol", "Pantoprazole", "Enalapril", "Brinzolamide", "Mebeverine", "Beta blockers", "Azithromycin", "Metformin"]},
+      {name:"Big Bazaar Street Medicos", phone:"+91 91639 28251", lat:11.0527, lng:76.983, address:"Big Bazaar Street, Coimbatore",
+        meds:["Paracetamol", "Zopiclone", "Carvedilol", "Topiramate", "Cinnarizine", "Atorvastatin", "Co-amoxiclav", "Diazepam"]},
+      {name:"Oppanakara Street Drug Store", phone:"+91 95365 81349", lat:11.0169, lng:76.9874, address:"Oppanakara Street, Coimbatore",
+        meds:["Paracetamol", "Tranexamic acid", "Beta blockers", "Amitriptyline", "Senna", "Eplerenone", "Irbesartan", "Paroxetine"]},
+      {name:"Cross Cut Road Pharmacy", phone:"+91 96946 75752", lat:11.0268, lng:77.0043, address:"Cross Cut Road, Coimbatore",
+        meds:["Paracetamol", "Lorazepam", "Bisoprolol", "Loperamide", "Linagliptin", "Cetirizine"]},
+      {name:"DB Road Medicals", phone:"+91 99104 29634", lat:11.0615, lng:76.989, address:"DB Road, Coimbatore",
+        meds:["Paracetamol", "Bimatoprost", "Lactulose", "Nifedipine", "Ropinirole", "Bendroflumethiazide"]},
+      {name:"Variety Hall Road Chemists", phone:"+91 98643 82802", lat:11.0236, lng:76.9349, address:"Variety Hall Road, Coimbatore",
+        meds:["Paracetamol", "Steroids", "Spironolactone", "Azathioprine", "Mesalazine", "Alogliptin", "Clotrimazole", "Carbocisteine"]},
+      {name:"Sowripalayam Health Store", phone:"+91 98563 83626", lat:10.99, lng:76.9885, address:"Sowripalayam, Coimbatore",
+        meds:["Paracetamol", "Sitagliptin", "Amlodipine", "Hydroxocobalamin", "Donepezil"]},
+      {name:"Kovilpalayam Medical Store", phone:"+91 98304 46331", lat:11.0303, lng:76.9565, address:"Kovilpalayam, Coimbatore",
+        meds:["Paracetamol", "Linagliptin", "Lorazepam", "Thiamine", "Lamotrigine", "Levothyroxine", "Clotrimazole", "Propranolol"]},
+      {name:"Kurichi Care Pharmacy", phone:"+91 94672 36553", lat:11.0196, lng:77.0009, address:"Kurichi, Coimbatore",
+        meds:["Paracetamol", "Betamethasone", "Furosemide", "Benzoyl peroxide", "Finasteride", "Hydroxocobalamin", "Dipyridamole", "Antacids"]},
+      {name:"Malumichampatti Health Mart", phone:"+91 93785 49685", lat:11.0373, lng:76.9472, address:"Malumichampatti, Coimbatore",
+        meds:["Paracetamol", "Spironolactone", "Brinzolamide", "Risperidone", "Omeprazole"]},
+      {name:"Irugur Family Pharmacy", phone:"+91 92578 38781", lat:11.036, lng:76.913, address:"Irugur, Coimbatore",
+        meds:["Paracetamol", "Flucloxacillin", "Latanoprost", "Bumetanide", "Peppermint oil"]},
+      {name:"Somayampalayam Medicos", phone:"+91 96627 62928", lat:11.0567, lng:76.9152, address:"Somayampalayam, Coimbatore",
+        meds:["Paracetamol", "Fusidic acid", "Cefalexin", "Erythromycin", "Docusate", "Antihistamines", "Rivaroxaban"]},
+      {name:"Vellalore Drug Store", phone:"+91 97551 12370", lat:11.0007, lng:76.9364, address:"Vellalore, Coimbatore",
+        meds:["Paracetamol", "Doxazosin", "Lisinopril", "Nitrofurantoin", "Diclofenac", "Liraglutide", "Amlodipine", "Baclofen"]},
+      {name:"Karumbukkadai Pharmacy", phone:"+91 91186 44808", lat:11.075, lng:76.9904, address:"Karumbukkadai, Coimbatore",
+        meds:["Paracetamol", "Acrivastine", "Statins", "Carbamazepine", "Cyanocobalamin", "Simvastatin", "Beta blockers"]},
+      {name:"Kavundampalayam Medicals", phone:"+91 94515 29577", lat:11.0552, lng:76.9978, address:"Kavundampalayam, Coimbatore",
+        meds:["Paracetamol", "Pseudoephedrine", "Donepezil", "Antifungal medicines", "Dapagliflozin", "Alogliptin", "Tamsulosin", "Prochlorperazine"]},
+      {name:"Vadamadurai Chemists", phone:"+91 94117 93157", lat:10.9788, lng:77.0032, address:"Vadamadurai, Coimbatore",
+        meds:["Paracetamol", "Terbinafine", "Codeine", "Antidepressants", "Naproxen"]},
+      {name:"Anna Nagar Health Store", phone:"+91 91564 11513", lat:11.0595, lng:76.9038, address:"Anna Nagar, Coimbatore",
+        meds:["Paracetamol", "Melatonin", "Furosemide", "Colecalciferol", "Nitrofurantoin", "Beta blockers", "Adalimumab"]},
+      {name:"Ramnagar Medical Store", phone:"+91 91265 44327", lat:11.02, lng:76.9244, address:"Ramnagar, Coimbatore",
+        meds:["Paracetamol", "Carbamazepine", "Chloramphenicol", "Diphenhydramine", "Nortriptyline"]},
+      {name:"Lakshmi Mills Care Pharmacy", phone:"+91 94556 75547", lat:10.9934, lng:76.9869, address:"Lakshmi Mills, Coimbatore",
+        meds:["Paracetamol", "Cyanocobalamin", "Empagliflozin", "Terbinafine", "Cetirizine", "Co-amoxiclav"]},
+      {name:"Rathinapuri Health Mart", phone:"+91 98664 34832", lat:10.9612, lng:76.898, address:"Rathinapuri, Coimbatore",
+        meds:["Paracetamol", "Clopidogrel", "Hydroxychloroquine", "Azathioprine", "Pantoprazole", "Tirzepatide", "Oxybutynin", "Gliclazide"]},
+      {name:"Peelamedu GN Mills Family Pharmacy", phone:"+91 96618 50341", lat:11.0356, lng:76.9613, address:"Peelamedu GN Mills, Coimbatore",
+        meds:["Paracetamol", "Clobetasol", "Edoxaban", "Cefalexin", "Tranexamic acid", "Quetiapine"]},
+      {name:"Hopes College Medicos", phone:"+91 95155 27015", lat:11.0443, lng:76.9126, address:"Hopes College, Coimbatore",
+        meds:["Paracetamol", "Antacids", "Nortriptyline", "Senna", "Co-codamol"]},
+      {name:"Ramakrishnapuram Drug Store", phone:"+91 96991 76314", lat:11.0085, lng:76.9024, address:"Ramakrishnapuram, Coimbatore",
+        meds:["Paracetamol", "Montelukast", "Clopidogrel", "Promethazine", "Diclofenac", "Adalimumab", "Irbesartan"]},
+      {name:"Vadavalli Pirivu Pharmacy", phone:"+91 90369 57728", lat:10.979, lng:76.9281, address:"Vadavalli Pirivu, Coimbatore",
+        meds:["Paracetamol", "Mebeverine", "Domperidone", "Clopidogrel", "Losartan", "Diphenhydramine", "Ciprofloxacin"]},
+      {name:"Kalveerampalayam Medicals", phone:"+91 96185 72212", lat:10.9996, lng:76.8959, address:"Kalveerampalayam, Coimbatore",
+        meds:["Paracetamol", "Levetiracetam", "Oxycodone", "Chloramphenicol", "Clotrimazole", "Levothyroxine", "Spironolactone"]}
+    ],
+    "Chennai": [
+      {name:"Wellness Point Pharmacy", phone:"+91 44 4211 8890", lat:13.0827, lng:80.2707, address:"T. Nagar, Chennai",
+        meds:["Paracetamol","Amoxicillin","Aspirin","Atorvastatin","Adalimumab","Semaglutide","Montelukast","Sitagliptin"]},
+      {name:"Marina Meds", phone:"+91 94440 33221", lat:13.0500, lng:80.2824, address:"Triplicane, Chennai",
+        meds:["Paracetamol","Ibuprofen","Diclofenac","Metoprolol","Furosemide","Warfarin"]},
+      {name:"Adyar Health Chemists", phone:"+91 98410 67231", lat:13.0012, lng:80.2565, address:"Adyar, Chennai",
+        meds:["Paracetamol","Amoxicillin","Metformin","Losartan","Fluoxetine","Sertraline"]}
+    ],
+    "Madurai": [
+      {name:"Meenakshi Medical Store", phone:"+91 90032 44119", lat:9.9252, lng:78.1198, address:"Simmakkal, Madurai",
+        meds:["Paracetamol","Amoxicillin","Ibuprofen","Metformin","Gliclazide","Naproxen","Zopiclone"]},
+      {name:"Vaigai Health Mart", phone:"+91 98653 21178", lat:9.9195, lng:78.1292, address:"Anna Nagar, Madurai",
+        meds:["Paracetamol","Azithromycin","Ciprofloxacin","Ranitidine","Colecalciferol"]}
+    ],
+    "Tiruchirappalli": [
+      {name:"Rock Fort Pharmacy", phone:"+91 90477 22119", lat:10.7905, lng:78.7047, address:"Cantonment, Tiruchirappalli",
+        meds:["Paracetamol","Amoxicillin","Ibuprofen","Aspirin","Metformin","Insulin"]},
+      {name:"Srirangam Medicals", phone:"+91 94430 55871", lat:10.8624, lng:78.6928, address:"Srirangam, Tiruchirappalli",
+        meds:["Paracetamol","Diclofenac","Cetirizine","Domperidone"]}
+    ],
+    "Salem": [
+      {name:"Steel City Pharmacy", phone:"+91 94430 88213", lat:11.6643, lng:78.1460, address:"Fairlands, Salem",
+        meds:["Paracetamol","Amoxicillin","Metformin","Aspirin","Atorvastatin"]},
+      {name:"Yercaud Road Medicals", phone:"+91 98653 41102", lat:11.6716, lng:78.1391, address:"Yercaud Road, Salem",
+        meds:["Paracetamol","Ibuprofen","Azithromycin","Loratadine"]}
+    ],
+    "Ariyalur": [
+      {name:"City Medicals", phone:"+91 91247 62364", lat:11.1203, lng:79.0688, address:"City Area, Ariyalur",
+        meds:["Paracetamol", "Finasteride", "Azithromycin", "Digoxin", "Dihydrocodeine"]},
+      {name:"Main Road Medical Store", phone:"+91 98973 30349", lat:11.1453, lng:79.0616, address:"Main Road Area, Ariyalur",
+        meds:["Paracetamol", "Sodium valproate", "Donepezil", "Rivaroxaban", "Lercanidipine", "Bisoprolol", "Decongestants", "Ropinirole"]}
+    ],
+    "Chengalpattu": [
+      {name:"Sri Medical Store", phone:"+91 98742 66261", lat:12.6866, lng:79.9746, address:"Sri Area, Chengalpattu",
+        meds:["Paracetamol", "Loperamide", "Simeticone", "Levothyroxine", "Methotrexate", "Tranexamic acid"]},
+      {name:"Anna Family Pharmacy", phone:"+91 99917 99508", lat:12.6944, lng:79.9694, address:"Anna Area, Chengalpattu",
+        meds:["Paracetamol", "Antidepressants", "Atorvastatin", "Acrivastine", "Betahistine", "Olanzapine"]}
+    ],
+    "Cuddalore": [
+      {name:"New Health Store", phone:"+91 97671 16655", lat:11.7424, lng:79.7556, address:"New Area, Cuddalore",
+        meds:["Paracetamol", "Nortriptyline", "Lorazepam", "Prednisolone", "Clopidogrel"]},
+      {name:"Sri Health Mart", phone:"+91 91866 75925", lat:11.7476, lng:79.7515, address:"Sri Area, Cuddalore",
+        meds:["Paracetamol", "Pantoprazole", "Loperamide", "Amlodipine", "Sertraline"]}
+    ],
+    "Dharmapuri": [
+      {name:"Town Drug Store", phone:"+91 91966 44807", lat:12.1306, lng:78.1483, address:"Town Area, Dharmapuri",
+        meds:["Paracetamol", "Rosuvastatin", "Simvastatin", "Chlorhexidine", "Clobetasone", "Senna"]},
+      {name:"Central Chemists", phone:"+91 96178 72784", lat:12.1271, lng:78.1566, address:"Central Area, Dharmapuri",
+        meds:["Paracetamol", "Solifenacin", "Adalimumab", "Nicorandil", "NSAIDs", "Omeprazole", "Cefalexin"]}
+    ],
+    "Dindigul": [
+      {name:"City Medicals", phone:"+91 94767 49900", lat:10.3504, lng:77.9662, address:"City Area, Dindigul",
+        meds:["Paracetamol", "Metformin", "Lansoprazole", "Amitriptyline", "Latanoprost", "Colecalciferol"]},
+      {name:"Main Road Medical Store", phone:"+91 93791 74174", lat:10.3862, lng:77.9643, address:"Main Road Area, Dindigul",
+        meds:["Paracetamol", "Ramipril", "Lisinopril", "Dexamethasone", "Isosorbide mononitrate", "Isotretinoin", "Solifenacin"]}
+    ],
+    "Erode": [
+      {name:"City Medicals", phone:"+91 93419 21253", lat:11.3257, lng:77.7329, address:"City Area, Erode",
+        meds:["Paracetamol", "Cetirizine", "Diazepam", "Irbesartan", "Antibiotics", "Tirzepatide", "Levothyroxine", "Hyoscine"]},
+      {name:"Main Road Medical Store", phone:"+91 93176 86214", lat:11.3608, lng:77.7127, address:"Main Road Area, Erode",
+        meds:["Paracetamol", "Bimatoprost", "Sildenafil", "Loperamide", "Colchicine"]}
+    ],
+    "Kallakurichi": [
+      {name:"City Medicals", phone:"+91 98386 24768", lat:11.7582, lng:78.945, address:"City Area, Kallakurichi",
+        meds:["Paracetamol", "Clobetasone", "Letrozole", "Latanoprost", "Finasteride", "Insulin", "Budesonide"]},
+      {name:"Main Road Medical Store", phone:"+91 97515 49577", lat:11.7202, lng:78.9594, address:"Main Road Area, Kallakurichi",
+        meds:["Paracetamol", "Furosemide", "Empagliflozin", "Fentanyl", "Dipyridamole", "Bendroflumethiazide"]}
+    ],
+    "Kanchipuram": [
+      {name:"Market Medicos", phone:"+91 95959 62200", lat:12.8478, lng:79.6837, address:"Market Area, Kanchipuram",
+        meds:["Paracetamol", "Cefalexin", "Ranitidine", "Metformin", "Senna"]},
+      {name:"Town Medicals", phone:"+91 96499 87224", lat:12.8258, lng:79.6985, address:"Town Area, Kanchipuram",
+        meds:["Paracetamol", "Escitalopram", "Gaviscon", "Simvastatin", "Cyclizine"]}
+    ],
+    "Kanyakumari": [
+      {name:"Anna Care Pharmacy", phone:"+91 90954 96766", lat:8.1922, lng:77.4258, address:"Anna Area, Kanyakumari",
+        meds:["Paracetamol", "Nystatin", "Bisoprolol", "Clotrimazole", "Colecalciferol", "Glyceryl trinitrate", "Linagliptin"]},
+      {name:"Gandhi Medicos", phone:"+91 96129 92692", lat:8.1706, lng:77.4455, address:"Gandhi Area, Kanyakumari",
+        meds:["Paracetamol", "Melatonin", "Mebeverine", "Chlorhexidine", "Rivaroxaban", "Anticoagulants", "Alendronic acid", "Salbutamol"]}
+    ],
+    "Karur": [
+      {name:"Gandhi Health Mart", phone:"+91 92759 47513", lat:10.9565, lng:78.0812, address:"Gandhi Area, Karur",
+        meds:["Paracetamol", "Alendronic acid", "Mebeverine", "Benzydamine", "Buscopan", "Ketoconazole", "Furosemide", "Edoxaban"]},
+      {name:"Bazaar Drug Store", phone:"+91 94515 95982", lat:10.9514, lng:78.0668, address:"Bazaar Area, Karur",
+        meds:["Paracetamol", "Dihydrocodeine", "Lansoprazole", "Memantine", "Perindopril", "Finasteride"]}
+    ],
+    "Krishnagiri": [
+      {name:"Town Drug Store", phone:"+91 91312 75615", lat:12.5034, lng:78.2194, address:"Town Area, Krishnagiri",
+        meds:["Paracetamol", "Mebeverine", "Citalopram", "Hyoscine", "Doxycycline", "Sitagliptin", "Gaviscon", "Betamethasone"]},
+      {name:"Central Chemists", phone:"+91 92450 82859", lat:12.5205, lng:78.2035, address:"Central Area, Krishnagiri",
+        meds:["Paracetamol", "Docusate", "Clonidine", "Ezetimibe", "Codeine"]}
+    ],
+    "Mayiladuthurai": [
+      {name:"City Medicals", phone:"+91 90867 64104", lat:11.1209, lng:79.6402, address:"City Area, Mayiladuthurai",
+        meds:["Paracetamol", "Folic acid", "Sertraline", "Loperamide", "Chlorphenamine", "Fentanyl", "Cyanocobalamin", "Duloxetine"]},
+      {name:"Main Road Medical Store", phone:"+91 99468 26498", lat:11.1186, lng:79.652, address:"Main Road Area, Mayiladuthurai",
+        meds:["Paracetamol", "Antihistamines", "Cyanocobalamin", "Clotrimazole", "Ferrous sulfate", "Fluconazole"]}
+    ],
+    "Nagapattinam": [
+      {name:"City Medicals", phone:"+91 94969 12858", lat:10.773, lng:79.8422, address:"City Area, Nagapattinam",
+        meds:["Paracetamol", "Losartan", "Gabapentin", "Ramipril", "Sodium valproate", "Terbinafine"]},
+      {name:"Main Road Medical Store", phone:"+91 90174 61317", lat:10.7661, lng:79.8484, address:"Main Road Area, Nagapattinam",
+        meds:["Paracetamol", "Hydroxychloroquine", "Clotrimazole", "Steroids", "Azathioprine", "Clarithromycin", "Brinzolamide", "Bisoprolol"]}
+    ],
+    "Namakkal": [
+      {name:"Gandhi Health Mart", phone:"+91 97187 82286", lat:11.2198, lng:78.175, address:"Gandhi Area, Namakkal",
+        meds:["Paracetamol", "Amoxicillin", "Steroids", "Benzydamine", "Clobetasone"]},
+      {name:"Bazaar Drug Store", phone:"+91 94231 92113", lat:11.2217, lng:78.1492, address:"Bazaar Area, Namakkal",
+        meds:["Paracetamol", "Loratadine", "Nystatin", "Glyceryl trinitrate", "Propranolol", "Sodium valproate", "Baclofen"]}
+    ],
+    "Nilgiris": [
+      {name:"Town Drug Store", phone:"+91 99296 60866", lat:11.3942, lng:76.687, address:"Town Area, Nilgiris",
+        meds:["Paracetamol", "Clarithromycin", "Sumatriptan", "Montelukast", "Amoxicillin", "Aspirin", "Lymecycline"]},
+      {name:"Central Chemists", phone:"+91 95760 41766", lat:11.4023, lng:76.6934, address:"Central Area, Nilgiris",
+        meds:["Paracetamol", "Loperamide", "Clonazepam", "Mebeverine", "Clotrimazole", "Atorvastatin", "Folic acid", "Quetiapine"]}
+    ],
+    "Perambalur": [
+      {name:"Gandhi Health Mart", phone:"+91 93610 98403", lat:11.2402, lng:78.8629, address:"Gandhi Area, Perambalur",
+        meds:["Paracetamol", "Anticoagulants", "Co-codamol", "Clobetasol", "Peppermint oil", "Gabapentin", "Ezetimibe", "Lercanidipine"]},
+      {name:"Bazaar Drug Store", phone:"+91 96471 99465", lat:11.2156, lng:78.8742, address:"Bazaar Area, Perambalur",
+        meds:["Paracetamol", "Cefalexin", "Ibuprofen", "Tamsulosin", "Diazepam", "Senna", "Valproic acid", "Levothyroxine"]}
+    ],
+    "Pudukkottai": [
+      {name:"Town Drug Store", phone:"+91 93419 35419", lat:10.366, lng:78.8212, address:"Town Area, Pudukkottai",
+        meds:["Paracetamol", "Isotretinoin", "Citalopram", "Colchicine", "Sitagliptin", "Diclofenac"]},
+      {name:"Central Chemists", phone:"+91 99291 39271", lat:10.3677, lng:78.8263, address:"Central Area, Pudukkottai",
+        meds:["Paracetamol", "Furosemide", "Peppermint oil", "Alogliptin", "Mometasone", "Bisacodyl", "Finasteride", "Allopurinol"]}
+    ],
+    "Ramanathapuram": [
+      {name:"Sri Medical Store", phone:"+91 92525 16794", lat:9.3524, lng:78.8585, address:"Sri Area, Ramanathapuram",
+        meds:["Paracetamol", "Carbimazole", "Finasteride", "Hyoscine", "Ranitidine"]},
+      {name:"Anna Family Pharmacy", phone:"+91 91269 53154", lat:9.3792, lng:78.8488, address:"Anna Area, Ramanathapuram",
+        meds:["Paracetamol", "Carbimazole", "Oxycodone", "Loperamide", "Sildenafil", "Isotretinoin"]}
+    ],
+    "Ranipet": [
+      {name:"Main Road Chemists", phone:"+91 96959 59005", lat:12.9062, lng:79.3374, address:"Main Road Area, Ranipet",
+        meds:["Paracetamol", "Hydroxocobalamin", "Buscopan", "Azathioprine", "Amoxicillin", "Anticoagulants", "Dapagliflozin"]},
+      {name:"New Care Pharmacy", phone:"+91 91674 37184", lat:12.9081, lng:79.3276, address:"New Area, Ranipet",
+        meds:["Paracetamol", "Erythromycin", "Solifenacin", "Tolterodine", "Diphenhydramine", "Terbinafine", "Gliclazide", "Antifungal medicines"]}
+    ],
+    "Sivaganga": [
+      {name:"Gandhi Health Mart", phone:"+91 95654 68503", lat:9.8253, lng:78.4798, address:"Gandhi Area, Sivaganga",
+        meds:["Paracetamol", "Domperidone", "Esomeprazole", "Semaglutide", "Lactulose", "Atorvastatin"]},
+      {name:"Bazaar Drug Store", phone:"+91 96141 59226", lat:9.8486, lng:78.4708, address:"Bazaar Area, Sivaganga",
+        meds:["Paracetamol", "Isosorbide mononitrate", "Amlodipine", "Terbinafine", "Amitriptyline"]}
+    ],
+    "Tenkasi": [
+      {name:"Gandhi Health Mart", phone:"+91 99447 57575", lat:8.9503, lng:77.3251, address:"Gandhi Area, Tenkasi",
+        meds:["Paracetamol", "Doxycycline", "Nicorandil", "Adalimumab", "Colchicine", "Sildenafil", "Risperidone"]},
+      {name:"Bazaar Drug Store", phone:"+91 94103 88062", lat:8.9676, lng:77.3322, address:"Bazaar Area, Tenkasi",
+        meds:["Paracetamol", "Insulin", "Topiramate", "Clobetasone", "Azathioprine"]}
+    ],
+    "Thanjavur": [
+      {name:"Main Road Chemists", phone:"+91 96908 42905", lat:10.786, lng:79.1561, address:"Main Road Area, Thanjavur",
+        meds:["Paracetamol", "Tiotropium", "Lercanidipine", "Beta blockers", "Letrozole", "Carbamazepine", "Aspirin", "Terbinafine"]},
+      {name:"New Care Pharmacy", phone:"+91 92721 40951", lat:10.8042, lng:79.1299, address:"New Area, Thanjavur",
+        meds:["Paracetamol", "Verapamil", "Docusate", "Irbesartan", "Escitalopram", "Steroids", "Mometasone"]}
+    ],
+    "Theni": [
+      {name:"Sri Medical Store", phone:"+91 92353 63445", lat:9.9936, lng:77.4647, address:"Sri Area, Theni",
+        meds:["Paracetamol", "Oxybutynin", "Losartan", "Lansoprazole", "Melatonin"]},
+      {name:"Anna Family Pharmacy", phone:"+91 96207 19458", lat:10.0122, lng:77.4632, address:"Anna Area, Theni",
+        meds:["Paracetamol", "Nitrofurantoin", "Antidepressants", "Chlorphenamine", "Apixaban", "Fusidic acid", "Letrozole"]}
+    ],
+    "Thoothukudi": [
+      {name:"Gandhi Health Mart", phone:"+91 92339 27423", lat:8.7837, lng:78.1537, address:"Gandhi Area, Thoothukudi",
+        meds:["Paracetamol", "Irbesartan", "Nifedipine", "Phenoxymethylpenicillin", "Clonazepam", "Sildenafil", "Lymecycline", "Valproic acid"]},
+      {name:"Bazaar Drug Store", phone:"+91 94400 46621", lat:8.7752, lng:78.1452, address:"Bazaar Area, Thoothukudi",
+        meds:["Paracetamol", "Felodipine", "Co-codamol", "Semaglutide", "Codeine", "Cefalexin", "Hydrocortisone"]}
+    ],
+    "Tirunelveli": [
+      {name:"Main Road Chemists", phone:"+91 92388 85796", lat:8.7038, lng:77.7465, address:"Main Road Area, Tirunelveli",
+        meds:["Paracetamol", "Donepezil", "Amlodipine", "Flucloxacillin", "Co-amoxiclav", "Clopidogrel"]},
+      {name:"New Care Pharmacy", phone:"+91 91769 70806", lat:8.7142, lng:77.746, address:"New Area, Tirunelveli",
+        meds:["Paracetamol", "Atenolol", "Ibuprofen", "Lactulose", "Tirzepatide"]}
+    ],
+    "Tirupathur": [
+      {name:"City Medicals", phone:"+91 95141 48492", lat:12.4842, lng:78.5665, address:"City Area, Tirupathur",
+        meds:["Paracetamol", "Bendroflumethiazide", "Alendronic acid", "Carbocisteine", "Montelukast", "Topiramate"]},
+      {name:"Main Road Medical Store", phone:"+91 95624 33299", lat:12.4983, lng:78.5858, address:"Main Road Area, Tirupathur",
+        meds:["Paracetamol", "Morphine", "Codeine", "Spironolactone", "Statins", "Peppermint oil", "Ibuprofen", "Azathioprine"]}
+    ],
+    "Tiruppur": [
+      {name:"Sri Medical Store", phone:"+91 95322 14909", lat:11.114, lng:77.3495, address:"Sri Area, Tiruppur",
+        meds:["Paracetamol", "Edoxaban", "Bimatoprost", "Adalimumab", "Chlorhexidine", "Co-codamol", "Aciclovir"]},
+      {name:"Anna Family Pharmacy", phone:"+91 93934 11491", lat:11.1125, lng:77.3472, address:"Anna Area, Tiruppur",
+        meds:["Paracetamol", "Fluticasone", "Pravastatin", "Felodipine", "Carbimazole", "Nifedipine", "Diphenhydramine"]}
+    ],
+    "Tiruvallur": [
+      {name:"Main Road Chemists", phone:"+91 97661 73374", lat:13.1062, lng:79.8933, address:"Main Road Area, Tiruvallur",
+        meds:["Paracetamol", "Fluticasone", "Aripiprazole", "Tadalafil", "Flucloxacillin"]},
+      {name:"New Care Pharmacy", phone:"+91 98193 95597", lat:13.1297, lng:79.8982, address:"New Area, Tiruvallur",
+        meds:["Paracetamol", "Flucloxacillin", "Propranolol", "Cyanocobalamin", "Fluticasone", "Decongestants"]}
+    ],
+    "Tiruvannamalai": [
+      {name:"Market Medicos", phone:"+91 90419 84254", lat:12.232, lng:79.0714, address:"Market Area, Tiruvannamalai",
+        meds:["Paracetamol", "Furosemide", "Cetirizine", "Warfarin", "Solifenacin", "Terbinafine", "Esomeprazole"]},
+      {name:"Town Medicals", phone:"+91 96308 10770", lat:12.2311, lng:79.0703, address:"Town Area, Tiruvannamalai",
+        meds:["Paracetamol", "Budesonide", "Gabapentin", "Beclometasone", "Tolterodine", "Antihistamines", "Fluoxetine", "Metoclopramide"]}
+    ],
+    "Tiruvarur": [
+      {name:"New Health Store", phone:"+91 92233 11944", lat:10.7814, lng:79.6329, address:"New Area, Tiruvarur",
+        meds:["Paracetamol", "Melatonin", "Bimatoprost", "Omeprazole", "Thiamine"]},
+      {name:"Sri Health Mart", phone:"+91 99479 76120", lat:10.7825, lng:79.6181, address:"Sri Area, Tiruvarur",
+        meds:["Paracetamol", "Bisacodyl", "Enalapril", "Decongestants", "Bumetanide", "Lithium"]}
+    ],
+    "Vellore": [
+      {name:"Main Road Chemists", phone:"+91 96602 35865", lat:12.9034, lng:79.1152, address:"Main Road Area, Vellore",
+        meds:["Paracetamol", "Benzydamine", "Trazodone", "Adalimumab", "Lansoprazole", "Dipyridamole", "Allopurinol"]},
+      {name:"New Care Pharmacy", phone:"+91 91829 91309", lat:12.9208, lng:79.138, address:"New Area, Vellore",
+        meds:["Paracetamol", "Olanzapine", "Sulfasalazine", "Venlafaxine", "Citalopram", "Nifedipine"]}
+    ],
+    "Viluppuram": [
+      {name:"Sri Medical Store", phone:"+91 97287 84111", lat:11.9363, lng:79.5, address:"Sri Area, Viluppuram",
+        meds:["Paracetamol", "Acrivastine", "Fluconazole", "Lisinopril", "Budesonide", "Ferrous sulfate"]},
+      {name:"Anna Family Pharmacy", phone:"+91 93142 83707", lat:11.9345, lng:79.4721, address:"Anna Area, Viluppuram",
+        meds:["Paracetamol", "Peppermint oil", "Trazodone", "Domperidone", "Bendroflumethiazide"]}
+    ],
+    "Virudhunagar": [
+      {name:"Market Medicos", phone:"+91 94764 65059", lat:9.5807, lng:77.9606, address:"Market Area, Virudhunagar",
+        meds:["Paracetamol", "Metronidazole", "Clotrimazole", "Gabapentin", "Fexofenadine", "Pantoprazole", "Ezetimibe"]},
+      {name:"Town Medicals", phone:"+91 90103 91119", lat:9.583, lng:77.9599, address:"Town Area, Virudhunagar",
+        meds:["Paracetamol", "Isotretinoin", "Clonazepam", "Hydroxychloroquine", "Sodium valproate", "Nifedipine", "Statins", "Tirzepatide"]}
+    ]
+  },
+  "Karnataka": {
+    "Bengaluru": [
+      {name:"MG Road Pharmacy", phone:"+91 80 2558 3312", lat:12.9716, lng:77.5946, address:"MG Road, Bengaluru",
+        meds:["Paracetamol","Amoxicillin","Aspirin","Empagliflozin","Semaglutide","Tirzepatide","Clopidogrel"]},
+      {name:"Koramangala Med Point", phone:"+91 98450 11290", lat:12.9352, lng:77.6245, address:"Koramangala, Bengaluru",
+        meds:["Paracetamol","Ibuprofen","Loratadine","Montelukast","Levothyroxine","Colecalciferol"]},
+      {name:"Whitefield Wellness Pharmacy", phone:"+91 99000 88214", lat:12.9698, lng:77.7500, address:"Whitefield, Bengaluru",
+        meds:["Paracetamol","Metformin","Rosuvastatin","Sitagliptin","Insulin"]},
+      {name:"Jayanagar Family Chemists", phone:"+91 98862 30071", lat:12.9308, lng:77.5838, address:"Jayanagar, Bengaluru",
+        meds:["Paracetamol","Amoxicillin","Cetirizine","Domperidone","Pantoprazole"]}
+    ],
+    "Mysuru": [
+      {name:"Devaraja Pharmacy", phone:"+91 98456 77123", lat:12.2958, lng:76.6394, address:"Devaraja Mohalla, Mysuru",
+        meds:["Paracetamol","Amoxicillin","Metformin","Gliclazide","Furosemide","Ranitidine"]},
+      {name:"Palace View Medicals", phone:"+91 94480 21167", lat:12.3052, lng:76.6552, address:"Vontikoppal, Mysuru",
+        meds:["Paracetamol","Ibuprofen","Aspirin","Atorvastatin"]}
+    ],
+    "Mangaluru": [
+      {name:"Coastal Care Pharmacy", phone:"+91 824 245 6631", lat:12.9141, lng:74.8560, address:"Hampankatta, Mangaluru",
+        meds:["Paracetamol","Amoxicillin","Ibuprofen","Metformin","Azithromycin"]},
+      {name:"Kadri Medicos", phone:"+91 94480 66123", lat:12.8996, lng:74.8494, address:"Kadri, Mangaluru",
+        meds:["Paracetamol","Cetirizine","Domperidone","Loratadine"]}
+    ]
+  },
+  "Kerala": {
+    "Kochi": [
+      {name:"Ernakulam Central Pharmacy", phone:"+91 484 235 6712", lat:9.9312, lng:76.2673, address:"Marine Drive, Kochi",
+        meds:["Paracetamol","Amoxicillin","Ibuprofen","Aspirin","Adalimumab","Warfarin","Propranolol"]},
+      {name:"Fort Kochi Chemists", phone:"+91 94470 22389", lat:9.9658, lng:76.2422, address:"Fort Kochi, Kochi",
+        meds:["Paracetamol","Metformin","Omeprazole","Pantoprazole","Sertraline"]}
+    ],
+    "Thiruvananthapuram": [
+      {name:"Trivandrum Health Chemists", phone:"+91 471 233 5589", lat:8.5241, lng:76.9366, address:"Statue, Thiruvananthapuram",
+        meds:["Paracetamol","Amoxicillin","Metformin","Insulin","Atorvastatin","Glyceryl trinitrate"]},
+      {name:"Kowdiar Medicals", phone:"+91 94950 12376", lat:8.5192, lng:76.9587, address:"Kowdiar, Thiruvananthapuram",
+        meds:["Paracetamol","Ibuprofen","Aspirin","Losartan"]}
+    ],
+    "Kozhikode": [
+      {name:"Beach Road Pharmacy", phone:"+91 495 236 6612", lat:11.2588, lng:75.7804, address:"Beach Road, Kozhikode",
+        meds:["Paracetamol","Amoxicillin","Metformin","Aspirin","Insulin"]},
+      {name:"Mananchira Medicals", phone:"+91 94470 55123", lat:11.2497, lng:75.7803, address:"Mananchira, Kozhikode",
+        meds:["Paracetamol","Ibuprofen","Cetirizine","Domperidone"]}
+    ]
+  },
+  "Telangana": {
+    "Hyderabad": [
+      {name:"Charminar Care Pharmacy", phone:"+91 40 6712 4455", lat:17.3850, lng:78.4867, address:"Abids, Hyderabad",
+        meds:["Paracetamol","Amoxicillin","Metformin","Atorvastatin","Rosuvastatin","Sitagliptin","Insulin"]},
+      {name:"Banjara Hills Medicos", phone:"+91 40 2354 8871", lat:17.4126, lng:78.4482, address:"Banjara Hills, Hyderabad",
+        meds:["Paracetamol","Ibuprofen","Aspirin","Losartan","Adalimumab"]}
+    ],
+    "Warangal": [
+      {name:"Kakatiya Medicos", phone:"+91 87012 66341", lat:17.9689, lng:79.5941, address:"Hanamkonda, Warangal",
+        meds:["Paracetamol","Ibuprofen","Azithromycin","Cetirizine","Domperidone"]},
+      {name:"Bhadrakali Pharmacy", phone:"+91 87018 34412", lat:18.0027, lng:79.5910, address:"Bhadrakali, Warangal",
+        meds:["Paracetamol","Amoxicillin","Metformin","Aspirin"]}
+    ]
+  },
+  "Andhra Pradesh": {
+    "Visakhapatnam": [
+      {name:"Beachside Pharmacy", phone:"+91 891 273 9988", lat:17.6868, lng:83.2185, address:"Dwaraka Nagar, Visakhapatnam",
+        meds:["Paracetamol","Amoxicillin","Ibuprofen","Losartan","Metformin","Salbutamol"]},
+      {name:"MVP Colony Medicals", phone:"+91 891 275 6612", lat:17.7326, lng:83.3193, address:"MVP Colony, Visakhapatnam",
+        meds:["Paracetamol","Aspirin","Atorvastatin","Insulin"]}
+    ],
+    "Vijayawada": [
+      {name:"Krishna Health Store", phone:"+91 866 245 7712", lat:16.5062, lng:80.6480, address:"Governorpet, Vijayawada",
+        meds:["Paracetamol","Aspirin","Atenolol","Diclofenac","Folic acid"]},
+      {name:"Benz Circle Pharmacy", phone:"+91 866 249 3321", lat:16.5006, lng:80.6577, address:"Benz Circle, Vijayawada",
+        meds:["Paracetamol","Amoxicillin","Metformin","Cetirizine"]}
+    ]
+  },
+  "Maharashtra": {
+    "Mumbai": [
+      {name:"Marine Line Pharmacy", phone:"+91 22 2871 3345", lat:19.0760, lng:72.8777, address:"Dadar, Mumbai",
+        meds:["Paracetamol","Amoxicillin","Aspirin","Rivaroxaban","Adalimumab","Tirzepatide","Insulin"]},
+      {name:"Bandra Health Chemists", phone:"+91 22 2640 8871", lat:19.0596, lng:72.8295, address:"Bandra West, Mumbai",
+        meds:["Paracetamol","Ibuprofen","Metformin","Atorvastatin","Sertraline"]}
+    ],
+    "Pune": [
+      {name:"Deccan Medicos", phone:"+91 20 2565 8890", lat:18.5204, lng:73.8567, address:"Deccan Gymkhana, Pune",
+        meds:["Paracetamol","Ibuprofen","Metformin","Atorvastatin","Losartan","Levothyroxine"]},
+      {name:"Kothrud Care Pharmacy", phone:"+91 20 2544 7723", lat:18.5074, lng:73.8077, address:"Kothrud, Pune",
+        meds:["Paracetamol","Amoxicillin","Aspirin","Cetirizine"]}
+    ],
+    "Nagpur": [
+      {name:"Sitabuldi Pharmacy", phone:"+91 712 254 3312", lat:21.1458, lng:79.0882, address:"Sitabuldi, Nagpur",
+        meds:["Paracetamol","Amoxicillin","Metformin","Aspirin","Insulin"]},
+      {name:"Dharampeth Medicals", phone:"+91 712 256 9987", lat:21.1394, lng:79.0625, address:"Dharampeth, Nagpur",
+        meds:["Paracetamol","Ibuprofen","Losartan","Domperidone"]}
+    ]
+  },
+  "Gujarat": {
+    "Ahmedabad": [
+      {name:"Navrangpura Pharmacy", phone:"+91 79 2646 1123", lat:23.0225, lng:72.5714, address:"Navrangpura, Ahmedabad",
+        meds:["Paracetamol","Amoxicillin","Metformin","Gliclazide","Aspirin","Clopidogrel"]},
+      {name:"Satellite Health Store", phone:"+91 79 2687 7712", lat:23.0304, lng:72.5107, address:"Satellite, Ahmedabad",
+        meds:["Paracetamol","Ibuprofen","Atorvastatin","Insulin"]}
+    ],
+    "Surat": [
+      {name:"Diamond City Medicos", phone:"+91 261 246 7789", lat:21.1702, lng:72.8311, address:"Athwa, Surat",
+        meds:["Paracetamol","Ibuprofen","Cetirizine","Domperidone","Ranitidine"]},
+      {name:"Adajan Pharmacy", phone:"+91 261 278 3321", lat:21.1959, lng:72.7933, address:"Adajan, Surat",
+        meds:["Paracetamol","Amoxicillin","Metformin","Aspirin"]}
+    ]
+  },
+  "Rajasthan": {
+    "Jaipur": [
+      {name:"Pink City Pharmacy", phone:"+91 141 401 2298", lat:26.9124, lng:75.7873, address:"MI Road, Jaipur",
+        meds:["Paracetamol","Amoxicillin","Aspirin","Atorvastatin","Metformin","Insulin"]},
+      {name:"Malviya Nagar Medicals", phone:"+91 141 275 6631", lat:26.8535, lng:75.8072, address:"Malviya Nagar, Jaipur",
+        meds:["Paracetamol","Ibuprofen","Losartan","Cetirizine"]}
+    ],
+    "Jodhpur": [
+      {name:"Blue City Chemists", phone:"+91 291 251 6634", lat:26.2389, lng:73.0243, address:"Sardarpura, Jodhpur",
+        meds:["Paracetamol","Ibuprofen","Azithromycin","Losartan"]},
+      {name:"Ratanada Pharmacy", phone:"+91 291 261 3387", lat:26.2632, lng:73.0139, address:"Ratanada, Jodhpur",
+        meds:["Paracetamol","Amoxicillin","Metformin","Aspirin"]}
+    ]
+  },
+  "Delhi": {
+    "New Delhi": [
+      {name:"Connaught Place Pharmacy", phone:"+91 11 4155 8823", lat:28.6315, lng:77.2167, address:"Connaught Place, New Delhi",
+        meds:["Paracetamol","Amoxicillin","Aspirin","Semaglutide","Adalimumab","Rivaroxaban","Insulin","Sitagliptin"]},
+      {name:"Karol Bagh Medicos", phone:"+91 11 2575 9012", lat:28.6519, lng:77.1909, address:"Karol Bagh, New Delhi",
+        meds:["Paracetamol","Ibuprofen","Metformin","Atorvastatin","Levothyroxine"]},
+      {name:"Lajpat Nagar Chemists", phone:"+91 11 2983 4471", lat:28.5677, lng:77.2436, address:"Lajpat Nagar, New Delhi",
+        meds:["Paracetamol","Amoxicillin","Cetirizine","Domperidone","Losartan"]}
+    ]
+  },
+  "Uttar Pradesh": {
+    "Lucknow": [
+      {name:"Hazratganj Health Store", phone:"+91 522 262 7745", lat:26.8467, lng:80.9462, address:"Hazratganj, Lucknow",
+        meds:["Paracetamol","Amoxicillin","Metformin","Aspirin","Losartan"]},
+      {name:"Gomti Nagar Pharmacy", phone:"+91 522 239 8871", lat:26.8500, lng:81.0000, address:"Gomti Nagar, Lucknow",
+        meds:["Paracetamol","Ibuprofen","Atorvastatin","Insulin"]}
+    ],
+    "Kanpur": [
+      {name:"Kanpur Central Pharmacy", phone:"+91 512 230 5567", lat:26.4499, lng:80.3319, address:"Civil Lines, Kanpur",
+        meds:["Paracetamol","Ibuprofen","Azithromycin","Cetirizine"]},
+      {name:"Swaroop Nagar Medicals", phone:"+91 512 254 1123", lat:26.4834, lng:80.3221, address:"Swaroop Nagar, Kanpur",
+        meds:["Paracetamol","Amoxicillin","Metformin","Aspirin"]}
+    ],
+    "Varanasi": [
+      {name:"Ganges Ghat Pharmacy", phone:"+91 542 250 6612", lat:25.3176, lng:82.9739, address:"Godowlia, Varanasi",
+        meds:["Paracetamol","Amoxicillin","Ibuprofen","Metformin","Insulin"]},
+      {name:"Lanka Medicals", phone:"+91 542 236 8823", lat:25.2701, lng:82.9909, address:"Lanka, Varanasi",
+        meds:["Paracetamol","Aspirin","Losartan","Domperidone"]}
+    ]
+  },
+  "West Bengal": {
+    "Kolkata": [
+      {name:"Park Street Pharmacy", phone:"+91 33 2229 4471", lat:22.5726, lng:88.3639, address:"Park Street, Kolkata",
+        meds:["Paracetamol","Amoxicillin","Aspirin","Insulin","Metformin","Warfarin","Adalimumab"]},
+      {name:"Salt Lake Medicos", phone:"+91 33 2358 6612", lat:22.5697, lng:88.4173, address:"Salt Lake, Kolkata",
+        meds:["Paracetamol","Ibuprofen","Atorvastatin","Cetirizine"]}
+    ],
+    "Howrah": [
+      {name:"Howrah Bridge Medicos", phone:"+91 33 2660 9981", lat:22.5958, lng:88.2636, address:"Howrah Maidan, Howrah",
+        meds:["Paracetamol","Ibuprofen","Domperidone","Ranitidine"]},
+      {name:"Shibpur Pharmacy", phone:"+91 33 2668 3321", lat:22.5726, lng:88.3169, address:"Shibpur, Howrah",
+        meds:["Paracetamol","Amoxicillin","Metformin","Aspirin"]}
+    ]
+  },
+  "Punjab": {
+    "Ludhiana": [
+      {name:"Model Town Pharmacy", phone:"+91 161 246 8823", lat:30.9010, lng:75.8573, address:"Model Town, Ludhiana",
+        meds:["Paracetamol","Amoxicillin","Metformin","Atorvastatin","Aspirin"]},
+      {name:"Sarabha Nagar Medicals", phone:"+91 161 251 3312", lat:30.8892, lng:75.8391, address:"Sarabha Nagar, Ludhiana",
+        meds:["Paracetamol","Ibuprofen","Losartan","Cetirizine"]}
+    ],
+    "Amritsar": [
+      {name:"Golden City Chemists", phone:"+91 183 222 3390", lat:31.6340, lng:74.8723, address:"Lawrence Road, Amritsar",
+        meds:["Paracetamol","Ibuprofen","Azithromycin","Losartan"]},
+      {name:"Ranjit Avenue Pharmacy", phone:"+91 183 250 6621", lat:31.6520, lng:74.8590, address:"Ranjit Avenue, Amritsar",
+        meds:["Paracetamol","Amoxicillin","Metformin","Aspirin"]}
+    ]
+  },
+  "Madhya Pradesh": {
+    "Bhopal": [
+      {name:"Lake View Pharmacy", phone:"+91 755 273 4498", lat:23.2599, lng:77.4126, address:"MP Nagar, Bhopal",
+        meds:["Paracetamol","Amoxicillin","Metformin","Aspirin","Insulin"]},
+      {name:"Arera Colony Medicals", phone:"+91 755 262 7712", lat:23.2156, lng:77.4342, address:"Arera Colony, Bhopal",
+        meds:["Paracetamol","Ibuprofen","Losartan","Cetirizine"]}
+    ],
+    "Indore": [
+      {name:"Rajwada Medicos", phone:"+91 731 253 7712", lat:22.7196, lng:75.8577, address:"Rajwada, Indore",
+        meds:["Paracetamol","Ibuprofen","Cetirizine","Domperidone"]},
+      {name:"Vijay Nagar Pharmacy", phone:"+91 731 267 8823", lat:22.7532, lng:75.8937, address:"Vijay Nagar, Indore",
+        meds:["Paracetamol","Amoxicillin","Metformin","Aspirin"]}
+    ]
+  },
+  "Bihar": {
+    "Patna": [
+      {name:"Gandhi Maidan Pharmacy", phone:"+91 612 222 6614", lat:25.5941, lng:85.1376, address:"Gandhi Maidan, Patna",
+        meds:["Paracetamol","Amoxicillin","Metformin","Aspirin","Losartan"]},
+      {name:"Boring Road Medicals", phone:"+91 612 254 9987", lat:25.6127, lng:85.1085, address:"Boring Road, Patna",
+        meds:["Paracetamol","Ibuprofen","Domperidone","Cetirizine"]}
+    ],
+    "Gaya": [
+      {name:"Bodhi Path Pharmacy", phone:"+91 631 222 5567", lat:24.7955, lng:85.0002, address:"Civil Lines, Gaya",
+        meds:["Paracetamol","Amoxicillin","Metformin","Aspirin"]},
+      {name:"Station Road Medicals", phone:"+91 631 224 8871", lat:24.7914, lng:85.0100, address:"Station Road, Gaya",
+        meds:["Paracetamol","Ibuprofen","Azithromycin"]}
+    ]
+  },
+  "Odisha": {
+    "Bhubaneswar": [
+      {name:"Temple City Chemists", phone:"+91 674 253 1129", lat:20.2961, lng:85.8245, address:"Master Canteen, Bhubaneswar",
+        meds:["Paracetamol","Ibuprofen","Azithromycin","Metformin"]},
+      {name:"Saheed Nagar Pharmacy", phone:"+91 674 255 6621", lat:20.2895, lng:85.8438, address:"Saheed Nagar, Bhubaneswar",
+        meds:["Paracetamol","Amoxicillin","Aspirin","Insulin"]}
+    ],
+    "Cuttack": [
+      {name:"Bidanasi Pharmacy", phone:"+91 671 236 7712", lat:20.4625, lng:85.8828, address:"Bidanasi, Cuttack",
+        meds:["Paracetamol","Amoxicillin","Metformin","Aspirin"]},
+      {name:"Buxi Bazar Medicals", phone:"+91 671 261 3390", lat:20.4695, lng:85.8792, address:"Buxi Bazar, Cuttack",
+        meds:["Paracetamol","Ibuprofen","Cetirizine"]}
+    ]
+  },
+  "Assam": {
+    "Guwahati": [
+      {name:"Brahmaputra Pharmacy", phone:"+91 361 273 6612", lat:26.1445, lng:91.7362, address:"Fancy Bazar, Guwahati",
+        meds:["Paracetamol","Amoxicillin","Aspirin","Metformin","Insulin"]},
+      {name:"Ganeshguri Medicals", phone:"+91 361 234 8871", lat:26.1490, lng:91.7899, address:"Ganeshguri, Guwahati",
+        meds:["Paracetamol","Ibuprofen","Losartan","Cetirizine"]}
+    ],
+    "Dibrugarh": [
+      {name:"Tea City Pharmacy", phone:"+91 373 232 6612", lat:27.4728, lng:94.9120, address:"Chowkidinghee, Dibrugarh",
+        meds:["Paracetamol","Amoxicillin","Metformin","Aspirin"]},
+      {name:"Mancotta Road Medicals", phone:"+91 373 230 1123", lat:27.4820, lng:94.9019, address:"Mancotta Road, Dibrugarh",
+        meds:["Paracetamol","Ibuprofen","Domperidone"]}
+    ]
+  }
+};
+
+/* ================= STATE / STORAGE ================= */
+let userLocation = null;
+navigator.geolocation && navigator.geolocation.getCurrentPosition(
+  pos => { userLocation = {lat:pos.coords.latitude, lng:pos.coords.longitude}; },
+  () => { userLocation = null; },
+  {timeout:4000}
+);
+
+function toast(msg, isError=false){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isError ? ' error' : '');
+  setTimeout(()=> t.className = 'toast', 2200);
+}
+
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.getElementById('loginErr').textContent = '';
+  document.getElementById('signupErr').textContent = '';
+}
+
+async function saveAccount(email, record){ await window.storage.set('account:' + email.toLowerCase(), JSON.stringify(record), false); }
+async function getAccount(email){
+  try{ const res = await window.storage.get('account:' + email.toLowerCase(), false); return res ? JSON.parse(res.value) : null; }
+  catch(e){ return null; }
+}
+
+async function handleSignup(){
+  const username = document.getElementById('suUsername').value.trim();
+  const email = document.getElementById('suEmail').value.trim();
+  const pass = document.getElementById('suPass').value;
+  const confirm = document.getElementById('suConfirm').value;
+  const errEl = document.getElementById('signupErr');
+
+  if(!username || !email || !pass || !confirm){ errEl.textContent = "Please fill in every field."; return; }
+  if(!/^\S+@\S+\.\S+$/.test(email)){ errEl.textContent = "Enter a valid email address."; return; }
+  if(pass.length < 6){ errEl.textContent = "Password should be at least 6 characters."; return; }
+  if(pass !== confirm){ errEl.textContent = "Passwords do not match."; return; }
+
+  const existing = await getAccount(email);
+  if(existing){ errEl.textContent = "An account with this email already exists. Please log in."; return; }
+
+  try{
+    await saveAccount(email, {username, email, pass});
+    toast("Account created — please log in.");
+    document.getElementById('loginEmail').value = email;
+    showScreen('loginScreen');
+  }catch(e){ errEl.textContent = "Couldn't save your account — please try again."; }
+}
+
+async function handleLogin(){
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  const errEl = document.getElementById('loginErr');
+  if(!email || !pass){ errEl.textContent = "Enter both email and password."; return; }
+
+  const acc = await getAccount(email);
+  if(!acc || acc.pass !== pass){ errEl.textContent = "Incorrect email or password."; return; }
+
+  document.getElementById('userChip').style.display = 'flex';
+  document.getElementById('userNameLabel').textContent = "Hi, " + acc.username;
+  initDashboard();
+  showScreen('dashScreen');
+}
+
+function logout(){
+  document.getElementById('userChip').style.display = 'none';
+  document.getElementById('loginPass').value = '';
+  showScreen('loginScreen');
+}
+
+/* ================= DASHBOARD LOGIC ================= */
+let activeMedicineFilter = "";
+
+function computeStats(){
+  let shopCount=0; const stateSet = new Set(Object.keys(DATA));
+  Object.values(DATA).forEach(dists=>{ Object.values(dists).forEach(list=> shopCount += list.length); });
+  document.getElementById('statShops').textContent = shopCount;
+  document.getElementById('statMeds').textContent = MEDICINES.length;
+  document.getElementById('statStates').textContent = stateSet.size;
+}
+computeStats();
+
+function initDashboard(){
+  computeStats();
+  const stateSel = document.getElementById('stateFilter');
+  stateSel.innerHTML = '<option value="">All states</option>' +
+    Object.keys(DATA).map(s=>`<option value="${s}">${s}</option>`).join('');
+  onFilterChange();
+  activeMedicineFilter = "";
+  document.getElementById('medSearch').value = "";
+  renderResults();
+}
+
+function onFilterChange(){
+  const state = document.getElementById('stateFilter').value;
+  const distSel = document.getElementById('districtFilter');
+  let districts = [];
+  if(state) districts = Object.keys(DATA[state]);
+  else Object.values(DATA).forEach(d=> districts.push(...Object.keys(d)));
+  distSel.innerHTML = '<option value="">All districts</option>' +
+    [...new Set(districts)].map(d=>`<option value="${d}">${d}</option>`).join('');
+  renderResults();
+}
+
+function onSearchInput(){
+  const q = document.getElementById('medSearch').value.trim().toLowerCase();
+  const box = document.getElementById('suggestBox');
+  if(!q){ box.style.display='none'; activeMedicineFilter=''; renderResults(); return; }
+  const matches = MEDICINES.filter(m=> m.toLowerCase().includes(q)).slice(0,8);
+  if(matches.length===0){ box.style.display='none'; activeMedicineFilter=q; renderResults(); return; }
+  box.innerHTML = matches.map(m=>{
+    const idx = m.toLowerCase().indexOf(q);
+    const before = m.slice(0,idx), mid = m.slice(idx, idx+q.length), after = m.slice(idx+q.length);
+    return `<div class="suggest-item" onclick="pickMedicine('${m.replace(/'/g,"\\'")}')">${before}<b>${mid}</b>${after}</div>`;
+  }).join('');
+  box.style.display='block';
+  activeMedicineFilter = q;
+  renderResults();
+}
+
+function pickMedicine(name){
+  document.getElementById('medSearch').value = name;
+  document.getElementById('suggestBox').style.display='none';
+  activeMedicineFilter = name.toLowerCase();
+  renderResults();
+}
+document.addEventListener('click', (e)=>{ if(!e.target.closest('.search-box')) document.getElementById('suggestBox').style.display='none'; });
+
+function getFilteredShops(){
+  const state = document.getElementById('stateFilter').value;
+  const district = document.getElementById('districtFilter').value;
+  let shops = [];
+  Object.entries(DATA).forEach(([st, dists])=>{
+    if(state && st!==state) return;
+    Object.entries(dists).forEach(([di, list])=>{
+      if(district && di!==district) return;
+      list.forEach(s=> shops.push({...s, state:st, district:di}));
+    });
+  });
+  if(activeMedicineFilter){ shops = shops.filter(s=> s.meds.some(m=> m.toLowerCase().includes(activeMedicineFilter))); }
+  return shops;
+}
+
+function renderResults(){
+  const shops = getFilteredShops();
+  const grid = document.getElementById('shopGrid');
+  const title = document.getElementById('resultsTitle');
+  const count = document.getElementById('resultsCount');
+
+  title.textContent = activeMedicineFilter
+    ? `Shops stocking “${document.getElementById('medSearch').value.trim()}”`
+    : "All registered pharmacies";
+  count.textContent = shops.length + (shops.length===1 ? " result" : " results");
+
+  if(shops.length===0){
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
+      <div class="icon">🔎</div>
+      <div>No registered pharmacy in this area lists that medicine yet.</div>
+      <div style="font-size:0.85rem; margin-top:6px;">Try another spelling, or clear the district filter.</div>
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML = shops.map(s=>{
+    const dest = `${s.lat},${s.lng}`;
+    const dirUrl = userLocation
+      ? `https://www.google.com/maps/dir/?api=1&origin=${userLocation.lat},${userLocation.lng}&destination=${dest}`
+      : `https://www.google.com/maps/dir/?api=1&destination=${dest}`;
+    const tags = s.meds.slice(0,6).map(m=>{
+      const isMatch = activeMedicineFilter && m.toLowerCase().includes(activeMedicineFilter);
+      return `<span class="med-tag ${isMatch?'match':''}">${m}</span>`;
+    }).join('');
+    return `
+    <div class="shop-card">
+      <div class="name-row"><h4>${s.name}</h4><span class="badge">${s.district}</span></div>
+      <div class="loc-line">📍 ${s.address}, ${s.state}</div>
+      <div class="loc-line">📞 ${s.phone}</div>
+      <div class="med-tags">${tags}${s.meds.length>6 ? `<span class="med-tag">+${s.meds.length-6} more</span>` : ''}</div>
+      <div class="card-actions">
+        <a class="btn-map" href="${dirUrl}" target="_blank" rel="noopener">Get directions</a>
+        <a class="btn-call" href="tel:${s.phone.replace(/\s/g,'')}">Call shop</a>
+      </div>
+    </div>`;
+  }).join('');
+}
+</script>
+</body>
+</html>
